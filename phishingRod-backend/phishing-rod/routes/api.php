@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ScanController;
+use Illuminate\Support\Facades\Route;
 
-Route::post('/scans', [ScanController::class, 'store']);
-Route::get('/scans/{uuid}', [ScanController::class, 'show']);
-Route::get('/scans', [ScanController::class, 'index']);
+// Scan creation is rate-limited aggressively; polling is more generous.
+Route::post('/scans', [ScanController::class, 'store'])->middleware('throttle:5,1');
+Route::get('/scans/{uuid}', [ScanController::class, 'show'])->middleware('throttle:60,1');
+Route::get('/scans', [ScanController::class, 'index'])->middleware('throttle:30,1');

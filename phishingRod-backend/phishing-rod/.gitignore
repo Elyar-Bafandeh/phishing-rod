@@ -1,6 +1,9 @@
 *.log
 .DS_Store
 .env
+.env.*
+!.env.example
+/storage/app/scans/
 .env.backup
 .env.production
 .phpactor.json

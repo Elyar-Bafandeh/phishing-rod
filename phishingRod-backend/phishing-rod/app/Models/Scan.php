@@ -17,4 +17,9 @@ class Scan extends Model
         'error_message',
         'completed_at',
     ];
+
+    protected $casts = [
+        'confidence'   => 'decimal:2',
+        'completed_at' => 'datetime',
+    ];
 }

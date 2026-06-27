@@ -1,14 +1,23 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
+use App\Models\Scan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ScanController extends Controller
 {
-    public function create()
+    public function index()
     {
-        return view('scans.create');
+        $scans = Scan::latest()
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'data' => $scans,
+        ]);
     }
 
     public function store(Request $request)
@@ -29,15 +38,18 @@ class ScanController extends Controller
             'status' => 'queued',
         ]);
 
-        return redirect()->route('scans.show', $scan->uuid);
+        return response()->json([
+            'message' => 'Scan created successfully.',
+            'data' => $scan,
+        ], 201);
     }
 
     public function show(string $uuid)
     {
         $scan = Scan::where('uuid', $uuid)->firstOrFail();
 
-        return view('scans.show', [
-            'scan' => $scan,
+        return response()->json([
+            'data' => $scan,
         ]);
     }
 }

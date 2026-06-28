@@ -4,17 +4,37 @@ namespace Tests\Unit\Actions;
 
 use App\Actions\Scans\CreateScanAction;
 use App\Enums\ScanStatus;
+use App\Jobs\ProcessScanJob;
 use App\Models\Scan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class CreateScanActionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Prevent the dispatched processing job from running so we can assert
+        // on the freshly-created (queued) state in isolation.
+        Queue::fake();
+    }
+
     private function action(): CreateScanAction
     {
         return app(CreateScanAction::class);
+    }
+
+    public function test_dispatches_processing_job_for_created_scan(): void
+    {
+        $scan = $this->action()->execute('https://example.com');
+
+        Queue::assertPushed(ProcessScanJob::class, function (ProcessScanJob $job) use ($scan) {
+            return $job->scanId === $scan->id;
+        });
     }
 
     public function test_creates_scan_with_queued_status(): void

@@ -3,6 +3,7 @@
 namespace App\Actions\Scans;
 
 use App\Enums\ScanStatus;
+use App\Jobs\ProcessScanJob;
 use App\Models\Scan;
 use Illuminate\Support\Str;
 
@@ -24,12 +25,18 @@ class CreateScanAction
     {
         $normalized = $this->normalizeUrlAction->execute($url);
 
-        return Scan::create([
+        $scan = Scan::create([
             'uuid'           => Str::uuid()->toString(),
             'submitted_url'  => $normalized['submitted_url'],
             'normalized_url' => $normalized['normalized_url'],
             'domain'         => $normalized['domain'],
             'status'         => ScanStatus::Queued,
         ]);
+
+        // Hand the scan off to the queue for asynchronous processing so the
+        // API request returns immediately without waiting for analysis.
+        ProcessScanJob::dispatch($scan->id);
+
+        return $scan;
     }
 }

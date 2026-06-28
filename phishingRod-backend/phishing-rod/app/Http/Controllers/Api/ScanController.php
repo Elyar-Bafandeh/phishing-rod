@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Scans\CreateScanAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreScanRequest;
 use App\Http\Resources\ScanResource;
 use App\Models\Scan;
-use Illuminate\Support\Str;
 
 class ScanController extends Controller
 {
@@ -17,19 +17,9 @@ class ScanController extends Controller
         return ScanResource::collection($scans);
     }
 
-    public function store(StoreScanRequest $request)
+    public function store(StoreScanRequest $request, CreateScanAction $createScanAction)
     {
-        $submittedUrl  = $request->validated()['url'];
-        $normalizedUrl = rtrim($submittedUrl, '/');
-        $domain        = strtolower(parse_url($normalizedUrl, PHP_URL_HOST) ?? '');
-
-        $scan = Scan::create([
-            'uuid'           => Str::uuid()->toString(),
-            'submitted_url'  => $submittedUrl,
-            'normalized_url' => $normalizedUrl,
-            'domain'         => $domain,
-            'status'         => 'queued',
-        ]);
+        $scan = $createScanAction->execute($request->validated('url'));
 
         return (new ScanResource($scan))
             ->additional(['message' => 'Scan created successfully.'])

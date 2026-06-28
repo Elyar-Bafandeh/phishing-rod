@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ScanStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class Scan extends Model
@@ -19,6 +20,7 @@ class Scan extends Model
     ];
 
     protected $casts = [
+        'status'       => ScanStatus::class,
         'confidence'   => 'decimal:2',
         'completed_at' => 'datetime',
     ];

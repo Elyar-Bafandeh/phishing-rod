@@ -14,7 +14,7 @@ class ScanResource extends JsonResource
             'submitted_url' => $this->submitted_url,
             'normalized_url'=> $this->normalized_url,
             'domain'        => $this->domain,
-            'status'        => $this->status,
+            'status'        => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,
             'verdict'       => $this->verdict,
             'confidence'    => $this->confidence !== null ? (float) $this->confidence : null,
             'error_message' => $this->error_message,

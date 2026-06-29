@@ -1,0 +1,14 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local secrets
+.env
+
+# Model binaries are large and must not be committed here.
+models/*.joblib

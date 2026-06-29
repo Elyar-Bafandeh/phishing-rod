@@ -1,0 +1,5 @@
+# Test/dev tooling for the ML service.
+-r requirements.txt
+
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0   # used by fastapi.testclient

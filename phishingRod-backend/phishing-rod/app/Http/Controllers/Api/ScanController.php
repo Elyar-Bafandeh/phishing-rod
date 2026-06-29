@@ -29,7 +29,7 @@ class ScanController extends Controller
 
     public function show(string $uuid)
     {
-        $scan = Scan::where('uuid', $uuid)->firstOrFail();
+        $scan = Scan::with('predictions')->where('uuid', $uuid)->firstOrFail();
 
         return new ScanResource($scan);
     }

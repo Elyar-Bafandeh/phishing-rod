@@ -18,8 +18,8 @@ use Illuminate\Queue\SerializesModels;
  * Step 3 of the urlscan.io pipeline: fetch and store the rendered DOM snapshot.
  *
  * The DOM is stored as a dom_html artifact (raw, untrusted text — never
- * rendered or executed). The chain currently stops at status `dom_fetched`;
- * Phase 12 will dispatch RunPredictionJob from here to produce the verdict.
+ * rendered or executed). Once stored, the job hands off to RunPredictionJob,
+ * which produces the verdict — the final link in the scan pipeline.
  */
 class FetchUrlscanDomJob implements ShouldQueue
 {
@@ -66,6 +66,7 @@ class FetchUrlscanDomJob implements ShouldQueue
         $submission->update(['dom_fetched_at' => now()]);
         $scan->update(['status' => ScanStatus::DomFetched]);
 
-        // Phase 12: RunPredictionJob::dispatch($this->scanId) will continue here.
+        // Hand off to the ML service for the final verdict.
+        RunPredictionJob::dispatch($this->scanId);
     }
 }

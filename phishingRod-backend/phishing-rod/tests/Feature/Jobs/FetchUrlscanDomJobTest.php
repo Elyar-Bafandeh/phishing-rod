@@ -4,11 +4,13 @@ namespace Tests\Feature\Jobs;
 
 use App\Enums\ScanStatus;
 use App\Jobs\FetchUrlscanDomJob;
+use App\Jobs\RunPredictionJob;
 use App\Models\Scan;
 use App\Services\Scans\ScanArtifactStorage;
 use App\Services\Urlscan\UrlscanClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -58,8 +60,9 @@ class FetchUrlscanDomJobTest extends TestCase
         return $scan;
     }
 
-    public function test_stores_dom_artifact_and_sets_status_dom_fetched(): void
+    public function test_stores_dom_artifact_and_chains_prediction_job(): void
     {
+        Queue::fake();
         Http::fake([
             'urlscan.io/dom/*' => Http::response('<html><body>hello</body></html>', 200),
         ]);
@@ -72,7 +75,7 @@ class FetchUrlscanDomJobTest extends TestCase
         $this->assertSame(ScanStatus::DomFetched, $scan->status);
         $this->assertNotNull($scan->urlscanSubmission->dom_fetched_at);
 
-        // The chain stops here for now — no verdict is fabricated.
+        // No verdict is fabricated here — RunPredictionJob produces it.
         $this->assertNull($scan->verdict);
         $this->assertNull($scan->confidence);
 
@@ -81,10 +84,13 @@ class FetchUrlscanDomJobTest extends TestCase
         Storage::disk('local')->assertExists($artifact->storage_path);
         $this->assertSame('text/html', $artifact->content_type);
         $this->assertSame('<html><body>hello</body></html>', Storage::disk('local')->get($artifact->storage_path));
+
+        Queue::assertPushed(RunPredictionJob::class, fn (RunPredictionJob $job) => $job->scanId === $scan->id);
     }
 
-    public function test_transient_dom_error_releases_without_failing(): void
+    public function test_transient_dom_error_releases_without_failing_or_chaining(): void
     {
+        Queue::fake();
         Http::fake(['urlscan.io/dom/*' => Http::response('not ready', 404)]);
 
         $scan = $this->makeScanWithSubmission();
@@ -97,5 +103,7 @@ class FetchUrlscanDomJobTest extends TestCase
         $scan->refresh();
         $this->assertNotSame(ScanStatus::Failed, $scan->status);
         $this->assertNull($scan->artifacts()->where('type', 'dom_html')->first());
+
+        Queue::assertNotPushed(RunPredictionJob::class);
     }
 }

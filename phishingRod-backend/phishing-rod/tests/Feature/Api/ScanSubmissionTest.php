@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api;
 
-use App\Jobs\ProcessScanJob;
+use App\Jobs\SubmitUrlscanJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -16,16 +16,16 @@ class ScanSubmissionTest extends TestCase
         parent::setUp();
 
         // Keep API-level assertions focused on the synchronous response;
-        // the queue job is exercised separately in ProcessScanJobTest.
+        // the queue jobs are exercised separately in their own tests.
         Queue::fake();
     }
 
-    public function test_submitting_a_url_dispatches_the_processing_job(): void
+    public function test_submitting_a_url_dispatches_the_urlscan_submission_job(): void
     {
         $this->postJson('/api/scans', ['url' => 'https://example.com'])
             ->assertCreated();
 
-        Queue::assertPushed(ProcessScanJob::class);
+        Queue::assertPushed(SubmitUrlscanJob::class);
     }
 
     public function test_valid_url_creates_scan(): void

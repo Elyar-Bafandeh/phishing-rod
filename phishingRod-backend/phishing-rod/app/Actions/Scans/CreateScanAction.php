@@ -3,7 +3,7 @@
 namespace App\Actions\Scans;
 
 use App\Enums\ScanStatus;
-use App\Jobs\ProcessScanJob;
+use App\Jobs\SubmitUrlscanJob;
 use App\Models\Scan;
 use Illuminate\Support\Str;
 
@@ -33,9 +33,9 @@ class CreateScanAction
             'status'         => ScanStatus::Queued,
         ]);
 
-        // Hand the scan off to the queue for asynchronous processing so the
-        // API request returns immediately without waiting for analysis.
-        ProcessScanJob::dispatch($scan->id);
+        // Kick off the urlscan.io pipeline asynchronously so the API request
+        // returns immediately. SubmitUrlscanJob chains to the fetch jobs.
+        SubmitUrlscanJob::dispatch($scan->id);
 
         return $scan;
     }

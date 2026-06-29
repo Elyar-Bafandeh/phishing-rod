@@ -1,28 +1,18 @@
-"""Phishing Rod ML service — FastAPI skeleton (Phase 9).
+"""Phishing Rod ML service — FastAPI app.
 
-This is the internal-only inference service. For now `/predict` returns a
-MOCK result: it validates the request, enforces the model allowlist and the
-bearer token, but performs no real feature extraction or model inference.
-Real loading/extraction/prediction arrives in Phase 10.
+Internal-only inference service. `/predict` runs the two-model weighted fusion
+(URL model + enhanced-HTML model) and returns a phishing verdict. Every request
+to `/predict` must carry the shared bearer token.
 """
 
 from fastapi import Depends, FastAPI, HTTPException, status
 
-from .config import get_settings
+from . import predictor
+from .model_loader import ModelError
 from .schemas import PredictRequest, PredictResponse
 from .security import require_token
 
-# The only model names that may ever be requested at runtime. The deprecated
-# `best_html_model.joblib` is intentionally excluded and must never be served.
-ALLOWED_MODELS = frozenset(
-    {
-        "best_combined_model.joblib",
-        "best_html_enhanced_model.joblib",
-        "best_url_model.joblib",
-    }
-)
-
-app = FastAPI(title="Phishing Rod ML Service", version="0.1.0")
+app = FastAPI(title="Phishing Rod ML Service", version="1.0.0")
 
 
 @app.get("/health")
@@ -33,23 +23,13 @@ def health() -> dict[str, str]:
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(payload: PredictRequest, _: None = Depends(require_token)) -> PredictResponse:
-    settings = get_settings()
-    model_name = payload.model_name or settings.ml_active_model
-
-    if model_name not in ALLOWED_MODELS:
+    try:
+        result = predictor.predict(url=payload.url, dom_html=payload.dom_html)
+    except ModelError as exc:
+        # Misconfiguration (missing/forbidden model file) — not the caller's fault.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Unknown or disallowed model: {model_name}",
-        )
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Model unavailable: {exc}",
+        ) from exc
 
-    # MOCK response — proves the contract and auth path end-to-end. Phase 10
-    # replaces this with real feature extraction + .joblib inference.
-    return PredictResponse(
-        label="safe",
-        confidence=0.5,
-        safe_probability=0.5,
-        phishing_probability=0.5,
-        model_name="mock",
-        feature_schema_version="mock-v1",
-        features={},
-    )
+    return PredictResponse(**result)

@@ -4,9 +4,11 @@ Internal FastAPI service that turns a URL + captured DOM into a phishing
 verdict. **Internal-only** — it is never exposed publicly and every request to
 `/predict` must carry the shared bearer token (`ML_SERVICE_TOKEN`).
 
-> **Status: Phase 9 skeleton.** `/predict` returns a *mock* response — it
-> validates the request, the model allowlist, and the token, but does no real
-> feature extraction or inference yet. Phase 10 wires the real models.
+> **Status: real inference (two-model weighted fusion).** `/predict` runs the
+> URL model and the enhanced-HTML model and fuses their phishing probabilities
+> (`p = 0.475·url + 0.525·html`, URL-only fallback when the DOM is thin). The
+> combined model is not used. See
+> `../../docs/backend_docs/phishing_rod_ml_models_reference.md`.
 
 ## Layout
 
@@ -28,17 +30,16 @@ ml-service/
 
 ## Runtime models
 
-Only these three model names are allowed at runtime (the deprecated
-`best_html_model.joblib` must **never** be loaded or served):
+Only **two** models are loaded at runtime (the loader rejects everything else):
 
-- `best_combined_model.joblib` (default)
-- `best_html_enhanced_model.joblib`
-- `best_url_model.joblib`
+- `best_url_model.joblib` — 29 URL features
+- `best_html_enhanced_model.joblib` — 69 enhanced-HTML features
 
-The binaries are large (~650 MB total) and are **not** committed here. Point
-`ML_MODELS_DIR` at wherever they live (e.g. the repo's
-`Trained_models_and_python_files/`) or copy the three files into `models/`.
-Phase 10 uses this setting to load them.
+`best_combined_model.joblib` is **not used** (trained on the deprecated HTML
+feature set) and `best_html_model.joblib` is **deprecated** — both are rejected.
+
+The binaries are large and **not** committed here. Point `ML_MODELS_DIR` at
+wherever they live, or copy the files into `models/` (already done locally).
 
 ## Run locally
 
@@ -59,26 +60,27 @@ Unauthenticated liveness probe → `{"status": "ok"}`.
 ### `POST /predict`
 Requires `Authorization: Bearer <ML_SERVICE_TOKEN>`.
 
-Request:
+Request (no `model_name` — both models always run):
 ```json
-{ "url": "https://example.com", "dom_html": "<html>...</html>", "model_name": "best_combined_model.joblib" }
+{ "url": "https://example.com", "dom_html": "<html>...</html>" }
 ```
 
-Mock response (Phase 9):
+Response (fused verdict + both per-model scores):
 ```json
 {
-  "label": "safe",
-  "confidence": 0.5,
-  "safe_probability": 0.5,
-  "phishing_probability": 0.5,
-  "model_name": "mock",
-  "feature_schema_version": "mock-v1",
-  "features": {}
+  "verdict": "safe",
+  "confidence": 0.86,
+  "combined_phishing_probability": 0.14,
+  "url_only_fallback": false,
+  "weights": { "url": 0.475, "html": 0.525 },
+  "url":  { "model_name": "best_url_model.joblib", "schema_version": "url-v1", "label": "safe", "phishing_probability": 0.18, "safe_probability": 0.82 },
+  "html": { "model_name": "best_html_enhanced_model.joblib", "schema_version": "html-enhanced-v1", "label": "safe", "phishing_probability": 0.10, "safe_probability": 0.90 },
+  "features": { "url": {}, "html": {} }
 }
 ```
 
-A missing/invalid token returns `401`; an unknown or disallowed `model_name`
-returns `422`.
+A missing/invalid token returns `401`. When the DOM is missing/too small, `html`
+is `null`, `url_only_fallback` is `true`, and `weights` is `{url:1, html:0}`.
 
 ## Tests
 

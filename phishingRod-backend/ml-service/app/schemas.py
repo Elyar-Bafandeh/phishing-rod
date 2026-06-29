@@ -6,23 +6,39 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PredictRequest(BaseModel):
-    # `model_name` lives in pydantic's protected `model_` namespace; opt out so
-    # the field name is allowed without warnings.
-    model_config = ConfigDict(protected_namespaces=())
-
     url: str = Field(..., min_length=1)
     dom_html: Optional[str] = None
+    # Accepted for forward-compatibility but ignored: the service always runs
+    # the two-model weighted fusion rather than a single selectable model.
     urlscan_result: Optional[dict[str, Any]] = None
-    model_name: Optional[str] = None
+
+
+class ModelScore(BaseModel):
+    # `model_name` is in pydantic's protected `model_` namespace; opt out.
+    model_config = ConfigDict(protected_namespaces=())
+
+    model_name: str
+    schema_version: str
+    label: str
+    phishing_probability: float
+    safe_probability: float
 
 
 class PredictResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    label: str
+    # Final fused verdict.
+    verdict: str
     confidence: float
-    safe_probability: float
-    phishing_probability: float
-    model_name: str
-    feature_schema_version: str
+    combined_phishing_probability: float
+
+    # Fusion detail.
+    url_only_fallback: bool
+    weights: dict[str, float]
+
+    # Per-model results. `html` is null when the DOM was missing/too small.
+    url: ModelScore
+    html: Optional[ModelScore] = None
+
+    # Raw extracted features for storage (keys: "url", "html"; "html" may be null).
     features: dict[str, Any]

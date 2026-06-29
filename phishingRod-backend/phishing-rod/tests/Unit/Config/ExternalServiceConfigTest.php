@@ -27,7 +27,6 @@ class ExternalServiceConfigTest extends TestCase
         $this->assertTrue(config()->has('ml.base_url'));
         $this->assertTrue(config()->has('ml.token'));
         $this->assertTrue(config()->has('ml.timeout'));
-        $this->assertTrue(config()->has('ml.active_model'));
     }
 
     public function test_ml_uses_safe_defaults(): void
@@ -37,13 +36,10 @@ class ExternalServiceConfigTest extends TestCase
         $this->assertSame(30, config('ml.timeout'));
     }
 
-    public function test_ml_active_model_defaults_to_primary_combined_model(): void
+    public function test_laravel_does_not_select_a_model(): void
     {
-        $this->assertSame('best_combined_model.joblib', config('ml.active_model'));
-    }
-
-    public function test_ml_active_model_is_never_the_deprecated_html_model(): void
-    {
-        $this->assertNotSame('best_html_model.joblib', config('ml.active_model'));
+        // Model selection + fusion live in the Python service; Laravel must not
+        // carry an active_model (the combined model is no longer used).
+        $this->assertFalse(config()->has('ml.active_model'));
     }
 }

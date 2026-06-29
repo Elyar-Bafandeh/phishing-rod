@@ -22,12 +22,28 @@ class Settings(BaseSettings):
     ml_service_token: str = "dev-internal-token-change-me"
 
     # Directory holding the runtime .joblib models. Configurable so the large
-    # model binaries need not be duplicated into the service tree — Phase 10
-    # can point this at the existing models folder. Defaults to ./models.
+    # model binaries need not be duplicated into the service tree.
     ml_models_dir: str = "models"
 
-    # Model used when a request does not specify one.
-    ml_active_model: str = "best_combined_model.joblib"
+    # --- Two-model weighted fusion -------------------------------------------
+    # We run the URL model and the enhanced-HTML model independently and combine
+    # their phishing probabilities as a weighted average. Weights are F1-derived
+    # (URL F1 0.877, HTML-enhanced F1 0.967) and configurable so they can be
+    # retuned without code changes. They are normalised at runtime, so they need
+    # not sum to exactly 1.
+    ml_weight_url: float = 0.475
+    ml_weight_html: float = 0.525
+
+    # Combined-probability thresholds that map a fused phishing probability to a
+    # verdict: phishing >= phishing_threshold; suspicious in
+    # [suspicious_threshold, phishing_threshold); otherwise safe.
+    ml_phishing_threshold: float = 0.75
+    ml_suspicious_threshold: float = 0.45
+
+    # Minimum DOM length (characters, after trim) for the HTML model to be
+    # trusted. Below this the capture is treated as empty/unusable and we fall
+    # back to a URL-only verdict so a failed page render can't dominate.
+    ml_dom_min_chars: int = 200
 
 
 @lru_cache

@@ -1,17 +1,24 @@
-# --- Phase 9: API skeleton (runtime) ---
+# --- API (runtime) ---
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
 pydantic>=2.7,<3.0
 pydantic-settings>=2.3,<3.0
 python-dotenv>=1.0,<2.0
 
-# --- Phase 10: real feature extraction + inference ---
-# Uncomment and install when wiring model_loader/predictor. Pin scikit-learn
-# to the version the .joblib models were trained with to avoid load errors.
-# joblib
-# scikit-learn==<training-version>
-# numpy
-# pandas
-# beautifulsoup4
-# lxml
-# tldextract
+# --- Model loading + inference ---
+# scikit-learn MUST match the training version (1.8.0) — the .joblib models are
+# RandomForest pipelines pickled by that version; a mismatch warns and may
+# misbehave. numpy must stay on the 2.x ABI the models were saved with.
+scikit-learn==1.8.0
+numpy>=2.0,<3.0
+scipy>=1.13
+joblib>=1.4
+
+# --- Feature extraction ---
+pandas>=2.0
+beautifulsoup4>=4.12
+lxml>=5.0
+tldextract>=5.0,<6.0
+
+# Note: xgboost is NOT required at runtime — both selected models are
+# RandomForests (xgboost was only a training candidate).

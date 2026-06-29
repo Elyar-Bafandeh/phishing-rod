@@ -19,7 +19,7 @@ use Illuminate\Queue\SerializesModels;
  *
  * The DOM is stored as a dom_html artifact (raw, untrusted text — never
  * rendered or executed). The chain currently stops at status `dom_fetched`;
- * Phase 11 will dispatch RunPredictionJob from here to produce the verdict.
+ * Phase 12 will dispatch RunPredictionJob from here to produce the verdict.
  */
 class FetchUrlscanDomJob implements ShouldQueue
 {
@@ -66,6 +66,6 @@ class FetchUrlscanDomJob implements ShouldQueue
         $submission->update(['dom_fetched_at' => now()]);
         $scan->update(['status' => ScanStatus::DomFetched]);
 
-        // Phase 11: RunPredictionJob::dispatch($this->scanId) will continue here.
+        // Phase 12: RunPredictionJob::dispatch($this->scanId) will continue here.
     }
 }

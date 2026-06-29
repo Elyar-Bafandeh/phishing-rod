@@ -58,20 +58,26 @@ class ScanRelationshipsTest extends TestCase
         $this->assertInstanceOf(FeatureSet::class, $scan->refresh()->featureSet);
     }
 
-    public function test_scan_has_one_prediction(): void
+    public function test_scan_has_many_predictions(): void
     {
         $scan = $this->makeScan();
-        $scan->prediction()->create(['label' => 'safe', 'confidence' => 87.50]);
+        $scan->predictions()->create(['model_name' => 'best_url_model.joblib', 'label' => 'safe', 'confidence' => 82.00]);
+        $scan->predictions()->create(['model_name' => 'best_html_enhanced_model.joblib', 'label' => 'safe', 'confidence' => 90.00]);
 
-        $this->assertInstanceOf(Prediction::class, $scan->refresh()->prediction);
-        $this->assertSame('safe', $scan->prediction->label);
+        $predictions = $scan->refresh()->predictions;
+        $this->assertCount(2, $predictions);
+        $this->assertInstanceOf(Prediction::class, $predictions->first());
+        $this->assertEqualsCanonicalizing(
+            ['best_url_model.joblib', 'best_html_enhanced_model.joblib'],
+            $predictions->pluck('model_name')->all()
+        );
     }
 
     public function test_prediction_belongs_to_model_version(): void
     {
         $scan = $this->makeScan();
         $modelVersion = ModelVersion::create(['name' => 'best_combined_model.joblib']);
-        $prediction = $scan->prediction()->create([
+        $prediction = $scan->predictions()->create([
             'model_version_id' => $modelVersion->id,
             'label'            => 'phishing',
         ]);
@@ -86,7 +92,7 @@ class ScanRelationshipsTest extends TestCase
         $scan->urlscanSubmission()->create(['urlscan_scan_id' => 'abc-123']);
         $scan->artifacts()->create(['type' => 'dom_html']);
         $scan->featureSet()->create(['feature_schema_version' => 'v1']);
-        $scan->prediction()->create(['label' => 'safe']);
+        $scan->predictions()->create(['label' => 'safe']);
 
         $scan->delete();
 
@@ -100,7 +106,7 @@ class ScanRelationshipsTest extends TestCase
     {
         $scan = $this->makeScan();
         $modelVersion = ModelVersion::create(['name' => 'best_url_model.joblib']);
-        $prediction = $scan->prediction()->create([
+        $prediction = $scan->predictions()->create([
             'model_version_id' => $modelVersion->id,
             'label'            => 'safe',
         ]);

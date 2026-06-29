@@ -59,7 +59,7 @@ class ModelCastsTest extends TestCase
     public function test_prediction_raw_probabilities_casts_to_array(): void
     {
         $scan = $this->makeScan();
-        $scan->prediction()->create([
+        $scan->predictions()->create([
             'label'             => 'safe',
             'raw_probabilities' => ['safe' => 0.87, 'phishing' => 0.13],
         ]);

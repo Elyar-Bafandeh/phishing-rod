@@ -42,8 +42,13 @@ class Scan extends Model
         return $this->hasOne(FeatureSet::class);
     }
 
-    public function prediction(): HasOne
+    /**
+     * Per-model predictions for this scan. The two-model approach stores one
+     * row per model that ran (URL model always; enhanced-HTML model unless the
+     * scan fell back to URL-only), so this is a hasMany rather than a hasOne.
+     */
+    public function predictions(): HasMany
     {
-        return $this->hasOne(Prediction::class);
+        return $this->hasMany(Prediction::class);
     }
 }
